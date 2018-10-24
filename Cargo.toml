@@ -4,6 +4,15 @@ version = "0.1.0"
 authors = ["Paul Cacheux <paulcacheux@gmail.com>"]
 edition = "2018"
 
+[lib]
+name = "raytracer"
+path = "src/lib.rs"
+
+[[bin]]
+name = "rt_driver"
+path = "src/main.rs"
+
 [dependencies]
 rand = "0.5.5"
 scoped_threadpool = "0.1.9"
+image = "0.20"

@@ -1,40 +1,37 @@
 extern crate rand;
 extern crate scoped_threadpool;
+extern crate image;
+extern crate raytracer;
 
-use std::fs::File;
 use std::io;
 use std::path::Path;
-use std::io::prelude::*;
-use std::sync::mpsc::channel;
 
 use rand::prelude::*;
 use scoped_threadpool::Pool;
 
-mod color;
-mod image;
-mod math;
-mod ray;
-mod hitable;
-mod camera;
-mod material;
+use raytracer::color::*;
+use raytracer::ray_image::RayImage;
+use raytracer::ray::Ray;
+use raytracer::math::*;
+use raytracer::hitable::*;
+use raytracer::camera::Camera;
+use raytracer::material::*;
 
-use self::color::*;
-use self::image::Image;
-use self::ray::Ray;
-use self::math::*;
-use self::hitable::*;
-use self::camera::Camera;
-use self::material::*;
-
-const WIDTH: usize = 800;
-const HEIGHT: usize = 400;
-const MAX_RAYS: usize = 100;
+const WIDTH: usize = 400;
+const HEIGHT: usize = 200;
+const MAX_RAYS: usize = 10;
 const MAX_DEPTH: usize = 50;
-const OUT_PATH: &str = "./output_test/out1.ppm";
+const OUT_PATH: &str = "./output_test/out1.png";
 
-fn emit_image_to_file<P: AsRef<Path>>(path: P, image: &Image) -> io::Result<()> {
-    let mut file = File::create(path)?;
-    write!(&mut file, "{}", image)
+fn emit_image_to_file<P: AsRef<Path>>(path: P, image: &RayImage) -> io::Result<()> {
+    let (width, height) = image.get_dimensions();
+
+    let out_image = image::ImageBuffer::from_fn(width as _, height as _, |x, y| {
+        let pixel = image.get_pixel(x as _, y as _);
+        image::Rgb([pixel.red, pixel.green, pixel.blue])
+    });
+
+    out_image.save(path)
 }
 
 fn main() {
@@ -45,20 +42,6 @@ fn main() {
     let aperture = 0.0;
     let aspect = WIDTH as f32 / HEIGHT as f32;
     let camera = Camera::new(lookfrom, lookat, vup, 90.0, aspect, aperture, dist_to_focus);
-
-    /* let spheres = vec![
-        Box::new(Sphere::new(Point::new(0.0, 0.0, -1.0), 0.5, Lambertian::new(Vector::new(0.1, 0.2, 0.5)))),
-        Box::new(Sphere::new(Point::new(0.0, -100.5, -1.0), 100.0, Lambertian::new(Vector::new(0.8, 0.8, 0.0)))),
-        Box::new(Sphere::new(Point::new(1.0, 0.0, -1.0), 0.5, Metal::new(Vector::new(0.8, 0.6, 0.2), 0.0))),
-        Box::new(Sphere::new(Point::new(-1.0, 0.0, -1.0), 0.5, Dielectric::new(1.5))),
-        Box::new(Sphere::new(Point::new(-1.0, 0.0, -1.0), -0.45, Dielectric::new(1.5))),
-    ]; */
-
-    /*let R = std::f32::consts::FRAC_PI_4.cos();
-    let spheres = vec![
-        Box::new(Sphere::new(Point::new(-R, 0.0, -1.0), R, Lambertian::new(Vector::new(0.0, 0.0, 1.0)))),
-        Box::new(Sphere::new(Point::new(R, 0.0, -1.0), R, Lambertian::new(Vector::new(1.0, 0.0, 0.0)))),
-    ];*/
 
     let world = random_scene();
 
@@ -92,27 +75,10 @@ fn color<H: Hitable>(ray: Ray, hitable: &H, depth: usize) -> Color {
     }    
 }
 
-/* fn build_in_sequence<F>(width: usize, height: usize, pixel_func: F) -> Image
-    where F: Fn(usize, usize, usize) -> Color
-{
-    let mut image = Image::new(width, height);
-    for y in 0..height {
-        for x in 0..width {
-            let mut avger = ColorAverager::new();
-            for n in 0..MAX_RAYS {
-                let color = pixel_func(x, y, n);
-                avger.add(color);
-            }
-            image.set_pixel(x, height - y - 1, avger.average());
-        }
-    }
-    image
-} */
-
-fn build_in_parallel<F>(width: usize, height: usize, pixel_func: F) -> Image
+fn build_in_parallel<F>(width: usize, height: usize, pixel_func: F) -> RayImage
     where F: Send + Copy + Fn(usize, usize, usize) -> Color
 {
-    let mut image = Image::new(width, height);
+    let mut image = RayImage::new(width, height);
     let mut pool = Pool::new(4);
 
     pool.scoped(|scoped| {
@@ -133,32 +99,17 @@ fn build_in_parallel<F>(width: usize, height: usize, pixel_func: F) -> Image
     image
 }
 
-/* fn build_in_parallel<F>(width: usize, height: usize, pixel_func: F) -> Image
-    where F: Sync + Fn(usize, usize, usize) -> Color
-{
-    let xy_iter = (0..height).into_par_iter().flat_map(|y| (0..width).into_par_iter().map(move |x| (x, y)));
-    let (sender, receiver) = channel();
-
-    xy_iter.for_each_with(sender, |sender, (x, y)| {
-        let mut avger = ColorAverager::new();
-        for n in 0..MAX_RAYS {
-            let color = pixel_func(x, y, n);
-            avger.add(color);
-        }
-        let mut final_color = avger.average();
-        // gamma correction
-        final_color.apply_func(|c| ((c as f64 / 255.0).sqrt() * 255.0) as u8);
-        sender.send((x, y, final_color)).unwrap();
-    });
-
-    let mut image = Image::new(width, height);
-    for (x, y, color) in receiver.iter() {
-        image.set_pixel(x, height - y - 1, color);
-    }
-
-    image
+#[allow(dead_code)]
+fn three_sphere_scene() -> Vec<Box<dyn Hitable>> {
+    vec![
+        Box::new(Sphere::new(Point::new(0.0, 0.0, -1.0), 0.5, Lambertian::new(Vector::new(0.1, 0.2, 0.5)))),
+        Box::new(Sphere::new(Point::new(0.0, -100.5, -1.0), 100.0, Lambertian::new(Vector::new(0.8, 0.8, 0.0)))),
+        Box::new(Sphere::new(Point::new(1.0, 0.0, -1.0), 0.5, Metal::new(Vector::new(0.8, 0.6, 0.2), 0.0))),
+        Box::new(Sphere::new(Point::new(-1.0, 0.0, -1.0), 0.5, Dielectric::new(1.5))),
+        Box::new(Sphere::new(Point::new(-1.0, 0.0, -1.0), -0.45, Dielectric::new(1.5))),
+    ]
 }
- */
+
 fn random_scene() -> Vec<Box<dyn Hitable>> {
     let mut spheres: Vec<Box<dyn Hitable>> = Vec::new();
 

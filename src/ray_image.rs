@@ -4,15 +4,15 @@ use std::marker::PhantomData;
 use crate::color::*;
 
 #[derive(Debug, Clone)]
-pub struct Image {
+pub struct RayImage {
     width: usize,
     height: usize,
     pixels: Vec<Color>
 }
 
-impl Image {
-    pub fn new(width: usize, height: usize) -> Image {
-        Image {
+impl RayImage {
+    pub fn new(width: usize, height: usize) -> RayImage {
+        RayImage {
             width,
             height,
             pixels: vec![Color::new(0, 0, 0); width * height]
@@ -29,13 +29,13 @@ impl Image {
         self.pixels[y * self.width + x]
     }
 
-    pub fn set_pixel(&mut self, x: usize, y: usize, color: Color) {
-        self.assert_coord_in_range(x, y);
-        self.pixels[y * self.width + x] = color;
-    }
+    // pub fn set_pixel(&mut self, x: usize, y: usize, color: Color) {
+    //     self.assert_coord_in_range(x, y);
+    //     self.pixels[y * self.width + x] = color;
+    // }
 
-    pub fn pixel_mut_iter<'a>(&'a mut self) -> ImagePixelIter<'a> {
-        ImagePixelIter {
+    pub fn pixel_mut_iter<'a>(&'a mut self) -> RayImagePixelIter<'a> {
+        RayImagePixelIter {
             image_start: self.pixels.as_mut_ptr(),
             current: 0,
             width: self.width,
@@ -43,9 +43,13 @@ impl Image {
             _marker: PhantomData,
         }
     }
+
+    pub fn get_dimensions(&self) -> (usize, usize) {
+        (self.width, self.height)
+    }
 }
 
-impl fmt::Display for Image {
+impl fmt::Display for RayImage {
     // we display the ppm version
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(f, "P3\n{} {}\n255\n", self.width, self.height)?;
@@ -59,7 +63,7 @@ impl fmt::Display for Image {
     }
 }
 
-pub struct ImagePixelIter<'a> {
+pub struct RayImagePixelIter<'a> {
     image_start: *mut Color,
     current: isize,
     width: usize,
@@ -67,7 +71,7 @@ pub struct ImagePixelIter<'a> {
     _marker: PhantomData<&'a ()>
 }
 
-impl<'a> Iterator for ImagePixelIter<'a> {
+impl<'a> Iterator for RayImagePixelIter<'a> {
     type Item = (usize, usize, &'a mut Color);
 
     fn next(&mut self) -> Option<Self::Item> {

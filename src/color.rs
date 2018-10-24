@@ -32,9 +32,9 @@ impl Color {
         Color::from_floats(vector.x, vector.y, vector.z)
     }
 
-    pub fn as_vector(self) -> Vector {
-        Vector::new(self.red as f32 / 255.0, self.green as f32 / 255.0, self.blue as f32 / 255.0)
-    }
+    // pub fn as_vector(self) -> Vector {
+    //     Vector::new(self.red as f32 / 255.0, self.green as f32 / 255.0, self.blue as f32 / 255.0)
+    // }
 }
 
 impl Mul<Vector> for Color {
