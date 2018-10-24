@@ -1,3 +1,5 @@
+use std::ops::Mul;
+
 use crate::math::Vector;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -19,9 +21,35 @@ impl Color {
     pub fn from_floats(red: f32, green: f32, blue: f32) -> Color {
         Color::new(map_float_u8(red), map_float_u8(green), map_float_u8(blue))
     }
+
+    pub fn apply_func<F>(&mut self, func: F) where F: Fn(u8) -> u8 {
+        self.red = func(self.red);
+        self.green = func(self.green);
+        self.blue = func(self.blue);
+    }
     
     pub fn from_vector(vector: Vector) -> Color {
         Color::from_floats(vector.x, vector.y, vector.z)
+    }
+
+    pub fn as_vector(self) -> Vector {
+        Vector::new(self.red as f32 / 255.0, self.green as f32 / 255.0, self.blue as f32 / 255.0)
+    }
+}
+
+impl Mul<Vector> for Color {
+    type Output = Color;
+
+    fn mul(self, other: Vector) -> Color {
+        fn map(c: u8, coeff: f32) -> u8 {
+            (c as f32 * coeff) as u8
+        }
+
+        Color {
+            red: map(self.red, other.x),
+            green: map(self.green, other.y),
+            blue: map(self.blue, other.z),
+        }
     }
 }
 

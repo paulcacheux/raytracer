@@ -1,5 +1,7 @@
 use std::ops::{Add, Neg, Mul, Sub, Div};
 
+use rand::Rng;
+
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct Point {
     pub x: f32,
@@ -65,6 +67,15 @@ impl Vector {
             z: self.z / n,
         }
     }
+
+    pub fn rand_in_unit_sphere<R: Rng + ?Sized>(rng: &mut R) -> Vector {
+        loop {
+            let v = Vector::new(rng.gen(), rng.gen(), rng.gen()) * 2.0 - Vector::new(1.0, 1.0, 1.0);
+            if v.norm_squared() < 1.0 {
+                return v;
+            }
+        }
+    }
 }
 
 impl Add<Vector> for Point {
@@ -88,6 +99,14 @@ impl Add for Vector {
             y: self.y + other.y,
             z: self.z + other.z,
         }
+    }
+}
+
+impl Sub for Vector {
+    type Output = Vector;
+
+    fn sub(self, other: Vector) -> Vector {
+        self + -other
     }
 }
 
