@@ -55,8 +55,12 @@ impl Vector {
         self.x * other.x + self.y * other.y + self.z * other.z
     }
 
-    pub fn normalize(&mut self) {
-        *self = self.normalized();
+    pub fn cross(self, other: Vector) -> Vector {
+        Vector {
+            x: self.y * other.z - self.z * other.y,
+            y: self.z * other.x - self.x * other.z,
+            z: self.x * other.y - self.y * other.x,
+        }
     }
 
     pub fn normalized(self) -> Vector {
@@ -71,6 +75,15 @@ impl Vector {
     pub fn rand_in_unit_sphere<R: Rng + ?Sized>(rng: &mut R) -> Vector {
         loop {
             let v = Vector::new(rng.gen(), rng.gen(), rng.gen()) * 2.0 - Vector::new(1.0, 1.0, 1.0);
+            if v.norm_squared() < 1.0 {
+                return v;
+            }
+        }
+    }
+
+    pub fn rand_in_unit_disk<R: Rng + ?Sized>(rng: &mut R) -> Vector {
+        loop {
+            let v = Vector::new(rng.gen(), rng.gen(), 0.0) * 2.0 - Vector::new(1.0, 1.0, 0.0);
             if v.norm_squared() < 1.0 {
                 return v;
             }

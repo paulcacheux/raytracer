@@ -21,7 +21,7 @@ impl HitInfos {
     }
 }
 
-pub trait Hitable {
+pub trait Hitable: Sync + Send {
     fn hit(&self, ray: Ray, tmin: f32, tmax: f32) -> Option<HitInfos>;
 }
 
@@ -73,7 +73,7 @@ impl Hitable for Sphere {
     }
 }
 
-impl<T: Hitable> Hitable for Vec<Box<T>> {
+impl Hitable for Vec<Box<dyn Hitable>> {
     fn hit(&self, ray: Ray, tmin: f32, tmax: f32) -> Option<HitInfos> {
         let mut infos = None;
         let mut tmax = tmax;

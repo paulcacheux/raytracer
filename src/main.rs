@@ -1,5 +1,5 @@
 extern crate rand;
-extern crate rayon;
+extern crate scoped_threadpool;
 
 use std::fs::File;
 use std::io;
@@ -8,7 +8,7 @@ use std::io::prelude::*;
 use std::sync::mpsc::channel;
 
 use rand::prelude::*;
-use rayon::prelude::*;
+use scoped_threadpool::Pool;
 
 mod color;
 mod image;
@@ -26,9 +26,9 @@ use self::hitable::*;
 use self::camera::Camera;
 use self::material::*;
 
-const WIDTH: usize = 200;
-const HEIGHT: usize = 100;
-const MAX_RAYS: usize = 500;
+const WIDTH: usize = 800;
+const HEIGHT: usize = 400;
+const MAX_RAYS: usize = 100;
 const MAX_DEPTH: usize = 50;
 const OUT_PATH: &str = "./output_test/out1.ppm";
 
@@ -38,34 +38,39 @@ fn emit_image_to_file<P: AsRef<Path>>(path: P, image: &Image) -> io::Result<()> 
 }
 
 fn main() {
-    let lower_left_corner = Point::new(-2.0, -1.0, -1.0);
-    let horizontal = Vector::new(4.0, 0.0, 0.0);
-    let vertical = Vector::new(0.0, 2.0, 0.0);
-    let origin = Point::origin();
+    let lookfrom = Point::new(6.0, 1.0, 2.0);
+    let lookat = Point::new(0.0, 1.0, 0.0);
+    let vup = Vector::new(0.0, 1.0, 0.0);
+    let dist_to_focus = (lookfrom - lookat).norm();
+    let aperture = 0.0;
+    let aspect = WIDTH as f32 / HEIGHT as f32;
+    let camera = Camera::new(lookfrom, lookat, vup, 90.0, aspect, aperture, dist_to_focus);
 
-    let camera = Camera {
-        lower_left_corner,
-        origin,
-        horizontal,
-        vertical
-    };
-
-    let spheres = vec![
+    /* let spheres = vec![
         Box::new(Sphere::new(Point::new(0.0, 0.0, -1.0), 0.5, Lambertian::new(Vector::new(0.1, 0.2, 0.5)))),
         Box::new(Sphere::new(Point::new(0.0, -100.5, -1.0), 100.0, Lambertian::new(Vector::new(0.8, 0.8, 0.0)))),
         Box::new(Sphere::new(Point::new(1.0, 0.0, -1.0), 0.5, Metal::new(Vector::new(0.8, 0.6, 0.2), 0.0))),
         Box::new(Sphere::new(Point::new(-1.0, 0.0, -1.0), 0.5, Dielectric::new(1.5))),
         Box::new(Sphere::new(Point::new(-1.0, 0.0, -1.0), -0.45, Dielectric::new(1.5))),
-    ];
+    ]; */
+
+    /*let R = std::f32::consts::FRAC_PI_4.cos();
+    let spheres = vec![
+        Box::new(Sphere::new(Point::new(-R, 0.0, -1.0), R, Lambertian::new(Vector::new(0.0, 0.0, 1.0)))),
+        Box::new(Sphere::new(Point::new(R, 0.0, -1.0), R, Lambertian::new(Vector::new(1.0, 0.0, 0.0)))),
+    ];*/
+
+    let world = random_scene();
 
     let image = build_in_parallel(WIDTH, HEIGHT, |x, y, _| {
+        let y = HEIGHT - y - 1;
         let mut rng = thread_rng();
         let dx: f32 = rng.gen();
         let dy: f32 = rng.gen();
         let u = (x as f32 + dx) / (WIDTH as f32);
         let v = (y as f32 + dy) / (HEIGHT as f32);
         let ray = camera.get_ray(u, v);
-        color(ray, &spheres, 0)
+        color(ray, &world, 0)
     });
     
     emit_image_to_file(OUT_PATH, &image).expect("Error writing image")
@@ -87,7 +92,7 @@ fn color<H: Hitable>(ray: Ray, hitable: &H, depth: usize) -> Color {
     }    
 }
 
-fn build_in_sequence<F>(width: usize, height: usize, pixel_func: F) -> Image
+/* fn build_in_sequence<F>(width: usize, height: usize, pixel_func: F) -> Image
     where F: Fn(usize, usize, usize) -> Color
 {
     let mut image = Image::new(width, height);
@@ -102,9 +107,33 @@ fn build_in_sequence<F>(width: usize, height: usize, pixel_func: F) -> Image
         }
     }
     image
-}
+} */
 
 fn build_in_parallel<F>(width: usize, height: usize, pixel_func: F) -> Image
+    where F: Send + Copy + Fn(usize, usize, usize) -> Color
+{
+    let mut image = Image::new(width, height);
+    let mut pool = Pool::new(4);
+
+    pool.scoped(|scoped| {
+        for (x, y, pixel) in image.pixel_mut_iter() {
+            scoped.execute(move || {
+                let mut avger = ColorAverager::new();
+                for n in 0..MAX_RAYS {
+                    let color = pixel_func(x, y, n);
+                    avger.add(color);
+                }
+                let mut final_color = avger.average();
+                final_color.apply_func(|c| ((c as f64 / 255.0).sqrt() * 255.0) as u8);
+                *pixel = final_color;
+            })
+        }
+    });
+
+    image
+}
+
+/* fn build_in_parallel<F>(width: usize, height: usize, pixel_func: F) -> Image
     where F: Sync + Fn(usize, usize, usize) -> Color
 {
     let xy_iter = (0..height).into_par_iter().flat_map(|y| (0..width).into_par_iter().map(move |x| (x, y)));
@@ -128,4 +157,70 @@ fn build_in_parallel<F>(width: usize, height: usize, pixel_func: F) -> Image
     }
 
     image
+}
+ */
+fn random_scene() -> Vec<Box<dyn Hitable>> {
+    let mut spheres: Vec<Box<dyn Hitable>> = Vec::new();
+
+    spheres.push(Box::new(Sphere::new(
+        Point::new(0.0, -1000.0, 0.0),
+        1000.0,
+        Lambertian::new(Vector::new(0.5, 0.5, 0.5))
+    )));
+
+    let mut rng = rand::thread_rng();
+    let mut rand_f32 = || rng.gen::<f32>();
+
+    for a in 0..22 {
+        let a = (a as f32) - 11.0;
+        for b in 0..22 {
+            let b = (b as f32) - 11.0;
+
+            let center = Point::new(a + 0.9 * rand_f32(), 0.2, b + 0.9 * rand_f32());
+            if (center.as_vector() - Vector::new(4.0, 0.2, 0.0)).norm() > 0.9 {
+                let mat_choose = rand_f32();
+
+                if mat_choose < 0.8 {
+                    spheres.push(Box::new(Sphere::new(
+                        center,
+                        0.2,
+                        Lambertian::new(Vector::new(rand_f32() * rand_f32(), rand_f32() * rand_f32(), rand_f32() * rand_f32()))
+                    )));
+                } else if mat_choose < 0.95 {
+                    spheres.push(Box::new(Sphere::new(
+                        center,
+                        0.2,
+                        Metal::new(Vector::new(0.5 * (1.0 + rand_f32()), 0.5 * (1.0 + rand_f32()), 0.5 * (1.0 + rand_f32())), 0.0)
+                    )));
+                } else {
+                    spheres.push(Box::new(Sphere::new(
+                        center,
+                        0.2,
+                        Dielectric::new(1.5)
+                    )));
+                }
+            }
+        }
+    }
+
+    spheres.push(Box::new(Sphere::new(
+        Point::new(0.0, 1.0, 0.0),
+        1.0,
+        Dielectric::new(1.5)
+    )));
+
+    spheres.push(Box::new(Sphere::new(
+        Point::new(-4.0, 1.0, 0.0),
+        1.0,
+        Lambertian::new(Vector::new(0.4, 0.2, 0.1))
+    )));
+
+    spheres.push(Box::new(Sphere::new(
+        Point::new(4.0, 1.0, 0.0),
+        1.0,
+        Metal::new(Vector::new(0.7, 0.6, 0.5), 0.0)
+    )));
+
+
+    spheres
 }

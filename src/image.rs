@@ -1,4 +1,5 @@
 use std::fmt;
+use std::marker::PhantomData;
 
 use crate::color::*;
 
@@ -32,6 +33,16 @@ impl Image {
         self.assert_coord_in_range(x, y);
         self.pixels[y * self.width + x] = color;
     }
+
+    pub fn pixel_mut_iter<'a>(&'a mut self) -> ImagePixelIter<'a> {
+        ImagePixelIter {
+            image_start: self.pixels.as_mut_ptr(),
+            current: 0,
+            width: self.width,
+            height: self.height,
+            _marker: PhantomData,
+        }
+    }
 }
 
 impl fmt::Display for Image {
@@ -45,5 +56,35 @@ impl fmt::Display for Image {
             }
         }
         Ok(())
+    }
+}
+
+pub struct ImagePixelIter<'a> {
+    image_start: *mut Color,
+    current: isize,
+    width: usize,
+    height: usize,
+    _marker: PhantomData<&'a ()>
+}
+
+impl<'a> Iterator for ImagePixelIter<'a> {
+    type Item = (usize, usize, &'a mut Color);
+
+    fn next(&mut self) -> Option<Self::Item> {
+        let current_u = self.current as usize;
+        if current_u >= self.width * self.height {
+            return None;
+        }
+
+        let y = current_u / self.width;
+        let x = current_u % self.width;
+        
+        let pixel_ref = unsafe {
+            let pixel_ref: &'a mut Color = &mut *self.image_start.offset(self.current);
+            self.current += 1;
+            pixel_ref
+        };
+
+        Some((x, y, pixel_ref))
     }
 }
