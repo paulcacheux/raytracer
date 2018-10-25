@@ -16,11 +16,11 @@ use raytracer::math::*;
 use raytracer::hitable::*;
 use raytracer::camera::Camera;
 use raytracer::material::*;
-use raytracer::texture::ConstantTexture;
+use raytracer::texture::*;
 
-const WIDTH: usize = 800;
-const HEIGHT: usize = 400;
-const MAX_RAYS: usize = 10;
+const WIDTH: usize = 1600;
+const HEIGHT: usize = 800;
+const MAX_RAYS: usize = 200;
 const MAX_DEPTH: usize = 50;
 const OUT_PATH: &str = "./output_test/out1.png";
 
@@ -36,13 +36,21 @@ fn emit_image_to_file<P: AsRef<Path>>(path: P, image: &RayImage) -> io::Result<(
 }
 
 fn main() {
-    let lookfrom = Point::new(6.0, 1.0, 2.0);
-    let lookat = Point::new(0.0, 1.0, 0.0);
+    let lookfrom = Point::new(10.0, 2.0, 3.0);
+    let lookat = Point::new(0.0, 0.0, 0.0);
     let vup = Vector::new(0.0, 1.0, 0.0);
-    let dist_to_focus = (lookfrom - lookat).norm();
+    let dist_to_focus = 10.0;
     let aperture = 0.0;
     let aspect = WIDTH as f32 / HEIGHT as f32;
     let camera = Camera::new(lookfrom, lookat, vup, 90.0, aspect, aperture, dist_to_focus);
+
+    // let lookfrom = Point::new(0.0, 0.0, 20.0);
+    // let lookat = Point::new(0.0, 0.0, -1.0);
+    // let vup = Vector::new(0.0, 1.0, 0.0);
+    // let dist_to_focus = (lookfrom - lookat).norm();
+    // let aperture = 0.0;
+    // let aspect = WIDTH as f32 / HEIGHT as f32;
+    // let camera = Camera::new(lookfrom, lookat, vup, 90.0, aspect, aperture, dist_to_focus);
 
     let world = random_scene();
     let bvh = BVH::new(world);
@@ -108,7 +116,22 @@ fn lambertian_from_float_comp(red: f32, green: f32, blue: f32) -> impl Material 
 }
 
 #[allow(dead_code)]
+fn one_perlin_sphere_scene() -> Vec<Box<dyn Hitable>> {
+    vec![
+        Box::new(Sphere::new(Point::new(0.0, 0.0, -1.0), 10.0, Lambertian::new(PerlinTexture::new(10.0)))),
+    ]
+}
+
+#[allow(dead_code)]
 fn three_sphere_scene() -> Vec<Box<dyn Hitable>> {
+    // let lookfrom = Point::new(13.0, 2.0, 3.0);
+    // let lookat = Point::new(0.0, 0.0, 0.0);
+    // let vup = Vector::new(0.0, 1.0, 0.0);
+    // let dist_to_focus = 10.0;
+    // let aperture = 0.0;
+    // let aspect = WIDTH as f32 / HEIGHT as f32;
+    // let camera = Camera::new(lookfrom, lookat, vup, 20.0, aspect, aperture, dist_to_focus);
+
     vec![
         Box::new(Sphere::new(Point::new(0.0, 0.0, -1.0), 0.5, lambertian_from_float_comp(0.1, 0.2, 0.5))),
         Box::new(Sphere::new(Point::new(0.0, -100.5, -1.0), 100.0, lambertian_from_float_comp(0.8, 0.8, 0.0))),
@@ -118,13 +141,30 @@ fn three_sphere_scene() -> Vec<Box<dyn Hitable>> {
     ]
 }
 
+#[allow(dead_code)]
+fn two_checker_sphere() -> Vec<Box<dyn Hitable>> {
+    let odd_texture: ConstantTexture = Color::from_floats(0.2, 0.3, 0.1).into();
+    let even_texture: ConstantTexture = Color::from_floats(0.9, 0.9, 0.9).into();
+    let checker_texture = CheckerTexture::new(odd_texture, even_texture);
+
+    vec![
+        Box::new(Sphere::new(Point::new(0.0, -10.0, 0.0), 10.0, Lambertian::new(checker_texture.clone()))),
+        Box::new(Sphere::new(Point::new(0.0, 10.0, 0.0), 10.0, Lambertian::new(checker_texture)))
+    ]
+}
+
+#[allow(dead_code)]
 fn random_scene() -> Vec<Box<dyn Hitable>> {
     let mut spheres: Vec<Box<dyn Hitable>> = Vec::new();
+
+    let odd_texture: ConstantTexture = Color::from_floats(0.2, 0.3, 0.1).into();
+    let even_texture: ConstantTexture = Color::from_floats(0.9, 0.9, 0.9).into();
+    let checker_texture = CheckerTexture::new(odd_texture, even_texture);
 
     spheres.push(Box::new(Sphere::new(
         Point::new(0.0, -1000.0, 0.0),
         1000.0,
-        lambertian_from_float_comp(0.5, 0.5, 0.5)
+        Lambertian::new(checker_texture)
     )));
 
     let mut rng = rand::thread_rng();
@@ -179,7 +219,6 @@ fn random_scene() -> Vec<Box<dyn Hitable>> {
         1.0,
         Metal::new(Vector::new(0.7, 0.6, 0.5), 0.0)
     )));
-
 
     spheres
 }

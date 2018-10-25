@@ -1,9 +1,6 @@
-use crate::prelude::*;
+use super::*;
 
-pub trait Texture: Send + Sync {
-    fn value(&self, u: f32, v: f32, point: Point) -> Color;
-}
-
+#[derive(Debug, Clone)]
 pub struct ConstantTexture {
     pub color: Color,
 }

@@ -1,4 +1,5 @@
 extern crate rand;
+extern crate perlin_noise;
 
 pub mod color;
 pub mod ray_image;
