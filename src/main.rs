@@ -18,9 +18,9 @@ use raytracer::camera::Camera;
 use raytracer::material::*;
 use raytracer::texture::*;
 
-const WIDTH: usize = 1600;
-const HEIGHT: usize = 800;
-const MAX_RAYS: usize = 200;
+const WIDTH: usize = 800;
+const HEIGHT: usize = 400;
+const MAX_RAYS: usize = 50;
 const MAX_DEPTH: usize = 50;
 const OUT_PATH: &str = "./output_test/out1.png";
 
@@ -36,8 +36,8 @@ fn emit_image_to_file<P: AsRef<Path>>(path: P, image: &RayImage) -> io::Result<(
 }
 
 fn main() {
-    let lookfrom = Point::new(10.0, 2.0, 3.0);
-    let lookat = Point::new(0.0, 0.0, 0.0);
+    let lookfrom = Point::new(0.0, 1.0, 2.0);
+    let lookat = Point::new(0.0, 0.0, -1.0);
     let vup = Vector::new(0.0, 1.0, 0.0);
     let dist_to_focus = 10.0;
     let aperture = 0.0;
@@ -52,7 +52,7 @@ fn main() {
     // let aspect = WIDTH as f32 / HEIGHT as f32;
     // let camera = Camera::new(lookfrom, lookat, vup, 90.0, aspect, aperture, dist_to_focus);
 
-    let world = random_scene();
+    let world = triangle_test();
     let bvh = BVH::new(world);
 
     let image = build_in_parallel(WIDTH, HEIGHT, |x, y, _| {
@@ -116,6 +116,19 @@ fn lambertian_from_float_comp(red: f32, green: f32, blue: f32) -> impl Material 
 }
 
 #[allow(dead_code)]
+fn triangle_test() -> Vec<Box<dyn Hitable>> {
+    vec![
+        Box::new(Triangle::new(
+            Point::new(-1.0, 0.0, -1.0),
+            Point::new(1.0, 0.0, -1.0),
+            Point::new(0.0, 2.0, -1.0),
+            lambertian_from_float_comp(0.9, 0.2, 0.1)
+        ))
+    ]
+}
+
+
+#[allow(dead_code)]
 fn one_perlin_sphere_scene() -> Vec<Box<dyn Hitable>> {
     vec![
         Box::new(Sphere::new(Point::new(0.0, 0.0, -1.0), 10.0, Lambertian::new(PerlinTexture::new(10.0)))),
@@ -133,8 +146,8 @@ fn three_sphere_scene() -> Vec<Box<dyn Hitable>> {
     // let camera = Camera::new(lookfrom, lookat, vup, 20.0, aspect, aperture, dist_to_focus);
 
     vec![
-        Box::new(Sphere::new(Point::new(0.0, 0.0, -1.0), 0.5, lambertian_from_float_comp(0.1, 0.2, 0.5))),
         Box::new(Sphere::new(Point::new(0.0, -100.5, -1.0), 100.0, lambertian_from_float_comp(0.8, 0.8, 0.0))),
+        Box::new(Sphere::new(Point::new(0.0, 0.0, -1.0), 0.5, lambertian_from_float_comp(0.1, 0.2, 0.5))),
         Box::new(Sphere::new(Point::new(1.0, 0.0, -1.0), 0.5, Metal::new(Vector::new(0.8, 0.6, 0.2), 0.0))),
         Box::new(Sphere::new(Point::new(-1.0, 0.0, -1.0), 0.5, Dielectric::new(1.5))),
         Box::new(Sphere::new(Point::new(-1.0, 0.0, -1.0), -0.45, Dielectric::new(1.5))),

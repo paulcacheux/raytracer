@@ -7,9 +7,11 @@ use crate::material::Material;
 mod sphere;
 mod bvh;
 mod aabb;
+mod triangle;
 pub use self::sphere::*;
 pub use self::bvh::*;
 pub use self::aabb::*;
+pub use self::triangle::*;
 
 pub struct HitInfos {
     pub t: f32,

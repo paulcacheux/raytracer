@@ -96,7 +96,7 @@ impl Hitable for BVH {
     }
 }
 
-mod utils {
+pub mod utils {
     use std::cmp::Ordering;
     use crate::hitable::Hitable;
 
