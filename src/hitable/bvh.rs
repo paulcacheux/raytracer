@@ -99,7 +99,7 @@ impl Hitable for BVH {
 
 mod utils {
     use std::cmp::Ordering;
-    use crate::hitable::{HitInfos, Hitable};
+    use crate::hitable::Hitable;
 
     pub fn fast_cmp(a: &f32, b: &f32) -> Ordering {
         if *a == *b {

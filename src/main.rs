@@ -19,7 +19,7 @@ use raytracer::material::*;
 
 const WIDTH: usize = 800;
 const HEIGHT: usize = 400;
-const MAX_RAYS: usize = 100;
+const MAX_RAYS: usize = 10;
 const MAX_DEPTH: usize = 50;
 const OUT_PATH: &str = "./output_test/out1.png";
 
