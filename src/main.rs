@@ -16,6 +16,7 @@ use raytracer::math::*;
 use raytracer::hitable::*;
 use raytracer::camera::Camera;
 use raytracer::material::*;
+use raytracer::texture::ConstantTexture;
 
 const WIDTH: usize = 800;
 const HEIGHT: usize = 400;
@@ -100,11 +101,17 @@ fn build_in_parallel<F>(width: usize, height: usize, pixel_func: F) -> RayImage
     image
 }
 
+fn lambertian_from_float_comp(red: f32, green: f32, blue: f32) -> impl Material {
+    let color = Color::from_floats(red, green, blue);
+    let texture: ConstantTexture = color.into();
+    Lambertian::new(texture)
+}
+
 #[allow(dead_code)]
 fn three_sphere_scene() -> Vec<Box<dyn Hitable>> {
     vec![
-        Box::new(Sphere::new(Point::new(0.0, 0.0, -1.0), 0.5, Lambertian::new(Vector::new(0.1, 0.2, 0.5)))),
-        Box::new(Sphere::new(Point::new(0.0, -100.5, -1.0), 100.0, Lambertian::new(Vector::new(0.8, 0.8, 0.0)))),
+        Box::new(Sphere::new(Point::new(0.0, 0.0, -1.0), 0.5, lambertian_from_float_comp(0.1, 0.2, 0.5))),
+        Box::new(Sphere::new(Point::new(0.0, -100.5, -1.0), 100.0, lambertian_from_float_comp(0.8, 0.8, 0.0))),
         Box::new(Sphere::new(Point::new(1.0, 0.0, -1.0), 0.5, Metal::new(Vector::new(0.8, 0.6, 0.2), 0.0))),
         Box::new(Sphere::new(Point::new(-1.0, 0.0, -1.0), 0.5, Dielectric::new(1.5))),
         Box::new(Sphere::new(Point::new(-1.0, 0.0, -1.0), -0.45, Dielectric::new(1.5))),
@@ -117,7 +124,7 @@ fn random_scene() -> Vec<Box<dyn Hitable>> {
     spheres.push(Box::new(Sphere::new(
         Point::new(0.0, -1000.0, 0.0),
         1000.0,
-        Lambertian::new(Vector::new(0.5, 0.5, 0.5))
+        lambertian_from_float_comp(0.5, 0.5, 0.5)
     )));
 
     let mut rng = rand::thread_rng();
@@ -136,7 +143,7 @@ fn random_scene() -> Vec<Box<dyn Hitable>> {
                     spheres.push(Box::new(Sphere::new(
                         center,
                         0.2,
-                        Lambertian::new(Vector::new(rand_f32() * rand_f32(), rand_f32() * rand_f32(), rand_f32() * rand_f32()))
+                        lambertian_from_float_comp(rand_f32() * rand_f32(), rand_f32() * rand_f32(), rand_f32() * rand_f32())
                     )));
                 } else if mat_choose < 0.95 {
                     spheres.push(Box::new(Sphere::new(
@@ -164,7 +171,7 @@ fn random_scene() -> Vec<Box<dyn Hitable>> {
     spheres.push(Box::new(Sphere::new(
         Point::new(-4.0, 1.0, 0.0),
         1.0,
-        Lambertian::new(Vector::new(0.4, 0.2, 0.1))
+        lambertian_from_float_comp(0.4, 0.2, 0.1)
     )));
 
     spheres.push(Box::new(Sphere::new(

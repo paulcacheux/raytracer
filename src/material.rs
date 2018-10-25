@@ -1,8 +1,7 @@
 use rand;
 use rand::Rng;
 
-use crate::ray::Ray;
-use crate::math::*;
+use crate::prelude::*;
 use crate::hitable::HitInfos;
 
 #[derive(Debug, Clone, Copy)]
@@ -15,23 +14,22 @@ pub trait Material: Send + Sync {
     fn scatter(&self, ray: Ray, infos: &HitInfos) -> Option<MaterialInfos>;
 }
 
-#[derive(Debug, Clone)]
-pub struct Lambertian {
-    pub albedo: Vector
+pub struct Lambertian<T: Texture> {
+    pub albedo: T
 }
 
-impl Lambertian {
-    pub fn new(albedo: Vector) -> Lambertian {
+impl<T: Texture> Lambertian<T> {
+    pub fn new(albedo: T) -> Lambertian<T> {
         Lambertian { albedo }
     }
 }
 
-impl Material for Lambertian {
+impl<T: Texture> Material for Lambertian<T> {
     fn scatter(&self, _: Ray, infos: &HitInfos) -> Option<MaterialInfos> {
         let target = infos.point + infos.normal + Vector::rand_in_unit_sphere(&mut rand::thread_rng());
         Some(MaterialInfos {
             scattered: Ray::new(infos.point, target - infos.point),
-            attenuation: self.albedo,
+            attenuation: self.albedo.value(0.0, 0.0, infos.point).as_vector(),
         })
     }
 }

@@ -8,3 +8,14 @@ pub mod hitable;
 pub mod camera;
 pub mod material;
 pub mod aabb;
+pub mod texture;
+
+pub mod prelude {
+    pub use super::color::Color;
+    pub use super::math::*;
+    pub use super::ray::Ray;
+    pub use super::hitable::Hitable;
+    pub use super::material::Material;
+    pub use super::aabb::AABB;
+    pub use super::texture::Texture;
+}

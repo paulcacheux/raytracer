@@ -1,5 +1,4 @@
-use crate::math::*;
-use crate::ray::Ray;
+use crate::prelude::*;
 
 #[derive(Debug, Clone, Copy)]
 pub struct AABB {

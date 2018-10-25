@@ -1,7 +1,6 @@
 use rand;
 
-use crate::ray::Ray;
-use crate::math::*;
+use crate::prelude::*;
 
 #[derive(Debug, Clone)]
 pub struct Camera {
