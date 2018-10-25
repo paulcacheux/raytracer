@@ -3,12 +3,13 @@ use std::sync::Arc;
 use crate::ray::Ray;
 use crate::math::*;
 use crate::material::Material;
-use crate::aabb::AABB;
 
 mod sphere;
 mod bvh;
+mod aabb;
 pub use self::sphere::*;
 pub use self::bvh::*;
+pub use self::aabb::*;
 
 pub struct HitInfos {
     pub t: f32,
