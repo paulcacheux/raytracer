@@ -17,9 +17,9 @@ use raytracer::hitable::*;
 use raytracer::camera::Camera;
 use raytracer::material::*;
 
-const WIDTH: usize = 400;
-const HEIGHT: usize = 200;
-const MAX_RAYS: usize = 10;
+const WIDTH: usize = 800;
+const HEIGHT: usize = 400;
+const MAX_RAYS: usize = 100;
 const MAX_DEPTH: usize = 50;
 const OUT_PATH: &str = "./output_test/out1.png";
 
@@ -44,6 +44,7 @@ fn main() {
     let camera = Camera::new(lookfrom, lookat, vup, 90.0, aspect, aperture, dist_to_focus);
 
     let world = random_scene();
+    let bvh = BVH::new(world);
 
     let image = build_in_parallel(WIDTH, HEIGHT, |x, y, _| {
         let y = HEIGHT - y - 1;
@@ -53,7 +54,7 @@ fn main() {
         let u = (x as f32 + dx) / (WIDTH as f32);
         let v = (y as f32 + dy) / (HEIGHT as f32);
         let ray = camera.get_ray(u, v);
-        color(ray, &world, 0)
+        color(ray, &bvh, 0)
     });
     
     emit_image_to_file(OUT_PATH, &image).expect("Error writing image")

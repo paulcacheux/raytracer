@@ -1,11 +1,14 @@
 use std::sync::Arc;
 
-use crate::ray::{Ray, TimedRay};
+use crate::ray::Ray;
 use crate::math::*;
 use crate::material::Material;
+use crate::aabb::AABB;
 
 mod sphere;
+mod bvh;
 pub use self::sphere::*;
+pub use self::bvh::*;
 
 pub struct HitInfos {
     pub t: f32,
@@ -26,6 +29,7 @@ impl HitInfos {
 
 pub trait Hitable: Sync + Send {
     fn hit(&self, ray: Ray, tmin: f32, tmax: f32) -> Option<HitInfos>;
+    fn bounding_box(&self) -> Option<AABB>;
 }
 
 impl Hitable for Vec<Box<dyn Hitable>> {
@@ -40,5 +44,22 @@ impl Hitable for Vec<Box<dyn Hitable>> {
             }
         }
         infos
+    }
+
+    fn bounding_box(&self) -> Option<AABB> {
+        let mut final_box = None;
+
+        for hitable in self {
+            if let Some(next_bb) = hitable.bounding_box() {
+                final_box = if let Some(bb) = final_box {
+                    Some(AABB::surrounding(next_bb, bb))
+                } else {
+                    None 
+                };
+            } else {
+                return None
+            }
+        }
+        final_box
     }
 }

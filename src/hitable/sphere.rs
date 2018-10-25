@@ -47,4 +47,10 @@ impl Hitable for Sphere {
             t1infos.or(t2infos)
         }
     }
+
+    fn bounding_box(&self) -> Option<AABB> {
+        let min = self.center - Vector::new(self.radius, self.radius, self.radius);
+        let max = self.center + Vector::new(self.radius, self.radius, self.radius);
+        Some(AABB::new(min.as_vector(), max.as_vector()))
+    }
 }
