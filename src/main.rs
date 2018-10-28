@@ -2,9 +2,11 @@ extern crate rand;
 extern crate scoped_threadpool;
 extern crate image;
 extern crate raytracer;
+extern crate pbr;
 
 use std::io;
 use std::path::Path;
+use std::sync::{Arc, Mutex};
 
 use rand::prelude::*;
 use scoped_threadpool::Pool;
@@ -18,9 +20,11 @@ use raytracer::camera::Camera;
 use raytracer::material::*;
 use raytracer::texture::*;
 
-const WIDTH: usize = 800;
-const HEIGHT: usize = 400;
-const MAX_RAYS: usize = 50;
+mod obj_reader;
+
+const WIDTH: usize = 4096;
+const HEIGHT: usize = 2160;
+const MAX_RAYS: usize = 10;
 const MAX_DEPTH: usize = 50;
 const OUT_PATH: &str = "./output_test/out1.png";
 
@@ -36,13 +40,22 @@ fn emit_image_to_file<P: AsRef<Path>>(path: P, image: &RayImage) -> io::Result<(
 }
 
 fn main() {
-    let lookfrom = Point::new(0.0, 1.0, 2.0);
-    let lookat = Point::new(0.0, 0.0, -1.0);
+    // let lookfrom = Point::new(0.0, 1.0, 3.0);
+    let lookfrom = Point::new(-800.0, 800.0, 500.0);
+    let lookat = Point::new(-300.0, 800.0, 0.0);
     let vup = Vector::new(0.0, 1.0, 0.0);
-    let dist_to_focus = 10.0;
+    let dist_to_focus = (lookfrom - lookat).norm();
     let aperture = 0.0;
     let aspect = WIDTH as f32 / HEIGHT as f32;
     let camera = Camera::new(lookfrom, lookat, vup, 90.0, aspect, aperture, dist_to_focus);
+
+// let lookfrom = Point::new(-1000.0, 2000.0, 1000.0);
+//     let lookat = Point::new(0.0, 0.0, -1.0);
+//     let vup = Vector::new(0.0, 1.0, 0.0);
+//     let dist_to_focus = (lookfrom - lookat).norm();
+//     let aperture = 0.0;
+//     let aspect = WIDTH as f32 / HEIGHT as f32;
+//     let camera = Camera::new(lookfrom, lookat, vup, 90.0, aspect, aperture, dist_to_focus);
 
     // let lookfrom = Point::new(0.0, 0.0, 20.0);
     // let lookat = Point::new(0.0, 0.0, -1.0);
@@ -52,8 +65,12 @@ fn main() {
     // let aspect = WIDTH as f32 / HEIGHT as f32;
     // let camera = Camera::new(lookfrom, lookat, vup, 90.0, aspect, aperture, dist_to_focus);
 
-    let world = triangle_test();
+    println!("Loading world..");
+    let world = obj_reader::read_obj_file("./input_test/LAM.obj").unwrap();
+    println!("Building BVh..");
+    // let world = random_scene();
     let bvh = BVH::new(world);
+    println!("Raytracing..");
 
     let image = build_in_parallel(WIDTH, HEIGHT, |x, y, _| {
         let y = HEIGHT - y - 1;
@@ -90,6 +107,7 @@ fn build_in_parallel<F>(width: usize, height: usize, pixel_func: F) -> RayImage
 {
     let mut image = RayImage::new(width, height);
     let mut pool = Pool::new(4);
+    let progress_bar = &Arc::new(Mutex::new(pbr::ProgressBar::new((width * height) as u64)));
 
     pool.scoped(|scoped| {
         for (x, y, pixel) in image.pixel_mut_iter() {
@@ -102,6 +120,7 @@ fn build_in_parallel<F>(width: usize, height: usize, pixel_func: F) -> RayImage
                 let mut final_color = avger.average();
                 final_color.apply_func(|c| ((c as f64 / 255.0).sqrt() * 255.0) as u8);
                 *pixel = final_color;
+                progress_bar.lock().unwrap().inc();
             })
         }
     });

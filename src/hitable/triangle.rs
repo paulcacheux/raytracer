@@ -18,6 +18,15 @@ impl Triangle {
             material: Arc::new(material)
         }
     }
+
+    pub fn new_with_arc(a: Point, b: Point, c: Point, material: Arc<dyn Material>) -> Self {
+        Triangle {
+            a,
+            b,
+            c,
+            material
+        }
+    }
 }
 
 impl Hitable for Triangle {
